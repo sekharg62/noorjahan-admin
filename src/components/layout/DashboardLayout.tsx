@@ -27,6 +27,7 @@ import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import PeopleIcon from '@mui/icons-material/People';
 import CategoryIcon from '@mui/icons-material/Category';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import ViewCarouselIcon from '@mui/icons-material/ViewCarousel';
 import SettingsIcon from '@mui/icons-material/Settings';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
@@ -47,6 +48,7 @@ const navItems = [
   { label: 'Customers', path: '/customers', icon: <PeopleIcon /> },
   { label: 'Collections', path: '/collections', icon: <CategoryIcon /> },
   { label: 'Menu & Submenu', path: '/menu-submenu', icon: <AccountTreeIcon /> },
+  { label: 'Banners', path: '/banners', icon: <ViewCarouselIcon /> },
   { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
 ];
 

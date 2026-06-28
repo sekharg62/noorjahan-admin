@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Box, Button, Card, CardContent } from '@mui/material';
+import { Alert, Box, Button, Card } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import { toast } from 'sonner';
@@ -142,15 +142,12 @@ export default function MenuSubmenuPage() {
       <PageHeader
         title="Menu & Submenu"
         description="Manage navigation menus and submenus for your storefront."
-      />
-
-      <Card elevation={0} sx={{ border: 1, borderColor: 'divider', mb: 2 }}>
-        <CardContent sx={{ display: 'flex', justifyContent: 'flex-end', py: 2 }}>
+        action={
           <Button variant="contained" startIcon={<AddIcon />} onClick={openCreateModal}>
             Add menu item
           </Button>
-        </CardContent>
-      </Card>
+        }
+      />
 
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>

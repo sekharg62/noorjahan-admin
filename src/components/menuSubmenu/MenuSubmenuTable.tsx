@@ -130,6 +130,7 @@ export default function MenuSubmenuTable({
         label: 'Actions',
         align: 'right',
         width: 100,
+        exportable: false,
         getSearchValue: (row) => `${row.name} ${row.slug} ${row.typeLabel} ${row.parentName}`,
         render: (row) => (
           <>
@@ -164,6 +165,8 @@ export default function MenuSubmenuTable({
       searchPlaceholder="Search by name, slug, type, or parent…"
       emptyMessage="No menu items yet. Create your first menu."
       noResultsMessage="No menu items match your search."
+      exportFilename="menu-submenu"
+      exportTitle="Menu & Submenu"
     />
   );
 }

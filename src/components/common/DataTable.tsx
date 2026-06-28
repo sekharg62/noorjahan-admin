@@ -1,9 +1,11 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import {
   Box,
+  IconButton,
   InputAdornment,
   Paper,
   Skeleton,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -12,11 +14,26 @@ import {
   TableRow,
   TableSortLabel,
   TextField,
+  ToggleButton,
+  ToggleButtonGroup,
+  Tooltip,
   Typography,
   type Theme,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import DensityLargeIcon from '@mui/icons-material/DensityLarge';
+import DensityMediumIcon from '@mui/icons-material/DensityMedium';
+import DensitySmallIcon from '@mui/icons-material/DensitySmall';
+import { toast } from 'sonner';
 import CopyableCell from './CopyableCell';
+import { STORAGE_KEYS } from '../../constants/storage';
+import { exportTableToCsv, exportTableToPdf } from '../../utils/exportTable';
+import {
+  readTableViewMode,
+  saveTableViewMode,
+  TABLE_VIEW_MODE_CONFIG,
+  type TableViewMode,
+} from '../../utils/tableViewMode';
 
 export type SortDirection = 'asc' | 'desc';
 
@@ -29,6 +46,8 @@ export type DataTableColumn<T> = {
   getSortValue?: (row: T) => string | number;
   getSearchValue?: (row: T) => string;
   getCopyValue?: (row: T) => string;
+  getExportValue?: (row: T) => string;
+  exportable?: boolean;
   render: (row: T, rowIndex: number) => ReactNode;
 };
 
@@ -42,6 +61,11 @@ type DataTableProps<T> = {
   noResultsMessage?: string;
   showSerialNumber?: boolean;
   serialNumberLabel?: string;
+  exportFilename?: string;
+  exportTitle?: string;
+  showExport?: boolean;
+  showViewMode?: boolean;
+  viewModeStorageKey?: string;
 };
 
 type SortState = {
@@ -66,9 +90,25 @@ export default function DataTable<T>({
   noResultsMessage = 'No results match your search.',
   showSerialNumber = true,
   serialNumberLabel = 'S.No',
+  exportFilename = 'table-export',
+  exportTitle,
+  showExport = true,
+  showViewMode = true,
+  viewModeStorageKey = STORAGE_KEYS.TABLE_VIEW_MODE,
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sort, setSort] = useState<SortState | null>(null);
+  const [viewMode, setViewMode] = useState<TableViewMode>(() =>
+    readTableViewMode(viewModeStorageKey),
+  );
+
+  const viewConfig = TABLE_VIEW_MODE_CONFIG[viewMode];
+
+  const handleViewModeChange = (_event: MouseEvent<HTMLElement>, nextMode: TableViewMode | null) => {
+    if (!nextMode) return;
+    setViewMode(nextMode);
+    saveTableViewMode(viewModeStorageKey, nextMode);
+  };
 
   const handleSort = (columnId: string) => {
     setSort((current) => {
@@ -120,6 +160,62 @@ export default function DataTable<T>({
   const hasFilteredRows = processedRows.length > 0;
   const columnCount = columns.length + (showSerialNumber ? 1 : 0);
 
+  const exportColumns = useMemo(
+    () =>
+      columns
+        .filter((column) => column.exportable !== false)
+        .map((column) => ({
+          id: column.id,
+          label: column.label,
+          getValue: (row: T, _rowIndex: number) =>
+            column.getExportValue?.(row) ??
+            column.getCopyValue?.(row) ??
+            column.getSearchValue?.(row) ??
+            '',
+        })),
+    [columns],
+  );
+
+  const buildExportData = () => ({
+    filename: exportFilename,
+    title: exportTitle,
+    columns: exportColumns.map((column) => ({
+      ...column,
+      getValue: (row: unknown, rowIndex: number) => column.getValue(row as T, rowIndex),
+    })),
+    rows: processedRows,
+    showSerialNumber,
+    serialNumberLabel,
+  });
+
+  const handleExportCsv = () => {
+    if (processedRows.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+
+    try {
+      exportTableToCsv(buildExportData());
+      toast.success('CSV exported');
+    } catch {
+      toast.error('Failed to export CSV');
+    }
+  };
+
+  const handleExportPdf = async () => {
+    if (processedRows.length === 0) {
+      toast.error('No data to export');
+      return;
+    }
+
+    try {
+      await exportTableToPdf(buildExportData());
+      toast.success('PDF exported');
+    } catch {
+      toast.error('Failed to export PDF');
+    }
+  };
+
   const headCellSx = {
     fontWeight: 600,
     whiteSpace: 'nowrap',
@@ -130,8 +226,9 @@ export default function DataTable<T>({
     borderBottom: 1,
     borderColor: 'divider',
     color: 'text.primary',
-    py: 1.5,
-    px: 2,
+    py: viewConfig.headPy,
+    px: viewConfig.px,
+    fontSize: viewConfig.fontSize,
     '& .MuiTableSortLabel-root': {
       color: 'text.secondary',
       '&:hover': { color: 'text.primary' },
@@ -144,44 +241,121 @@ export default function DataTable<T>({
 
   const serialCellSx = {
     whiteSpace: 'nowrap',
-    width: 72,
-    minWidth: 72,
-    maxWidth: 72,
-    px: 2,
+    width: viewConfig.serialWidth,
+    minWidth: viewConfig.serialWidth,
+    maxWidth: viewConfig.serialWidth,
+    px: viewConfig.px,
     textAlign: 'center',
   };
 
   const bodyCellSx = {
-    px: 2,
-    py: 1.5,
+    px: viewConfig.px,
+    py: viewConfig.bodyPy,
     verticalAlign: 'middle',
+    fontSize: viewConfig.fontSize,
   };
 
   return (
     <Paper elevation={0} sx={{ border: 1, borderColor: 'divider' }}>
       <TableContainer>
-        <Table size="medium" sx={{ tableLayout: 'fixed', width: '100%' }}>
+        <Table size={viewConfig.tableSize} sx={{ tableLayout: 'fixed', width: '100%' }}>
           <TableHead>
             {showToolbar && (
               <TableRow>
-                <TableCell colSpan={columnCount} sx={{ ...headCellSx, py: 2 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                    <TextField
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder={searchPlaceholder}
-                      size="small"
-                      sx={{ width: { xs: '100%', sm: 360 } }}
-                      slotProps={{
-                        input: {
-                          startAdornment: (
-                            <InputAdornment position="start">
-                              <SearchIcon fontSize="small" color="action" />
-                            </InputAdornment>
-                          ),
+                <TableCell colSpan={columnCount} sx={{ ...headCellSx, py: viewConfig.toolbarPy }}>
+                  <Box
+                    sx={{
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      minHeight: 40,
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        position: 'absolute',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        width: {
+                          xs: showViewMode ? 'calc(100% - 168px)' : 'calc(100% - 96px)',
+                          sm: 360,
                         },
                       }}
-                    />
+                    >
+                      <TextField
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder={searchPlaceholder}
+                        size="small"
+                        fullWidth
+                        slotProps={{
+                          input: {
+                            startAdornment: (
+                              <InputAdornment position="start">
+                                <SearchIcon fontSize="small" color="action" />
+                              </InputAdornment>
+                            ),
+                          },
+                        }}
+                      />
+                    </Box>
+
+                    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+                      {showViewMode && (
+                        <ToggleButtonGroup
+                          value={viewMode}
+                          exclusive
+                          size="small"
+                          onChange={handleViewModeChange}
+                          aria-label="Table view mode"
+                          sx={{ mr: 0.5 }}
+                        >
+                          <ToggleButton value="comfortable" aria-label="Comfortable spacing">
+                            <DensityLargeIcon fontSize="small" />
+                          </ToggleButton>
+                          <ToggleButton value="standard" aria-label="Standard spacing">
+                            <DensityMediumIcon fontSize="small" />
+                          </ToggleButton>
+                          <ToggleButton value="compact" aria-label="Compact spacing">
+                            <DensitySmallIcon fontSize="small" />
+                          </ToggleButton>
+                        </ToggleButtonGroup>
+                      )}
+
+                      {showExport && (
+                        <>
+                          <Tooltip title="Export PDF">
+                            <IconButton
+                              size="small"
+                              onClick={() => void handleExportPdf()}
+                              aria-label="Export table as PDF"
+                            >
+                              <Box
+                                component="img"
+                                src="/pdf.svg"
+                                alt=""
+                                sx={{ width: 22, height: 22, display: 'block' }}
+                              />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Export CSV">
+                            <IconButton
+                              size="small"
+                              onClick={handleExportCsv}
+                              aria-label="Export table as CSV"
+                            >
+                              <Box
+                                component="img"
+                                src="/csv.svg"
+                                alt=""
+                                sx={{ width: 22, height: 22, display: 'block' }}
+                              />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
+                    </Stack>
                   </Box>
                 </TableCell>
               </TableRow>
