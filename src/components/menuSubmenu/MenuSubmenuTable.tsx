@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Chip, IconButton, Tooltip, Typography } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import DataTable, { type DataTableColumn } from '../common/DataTable';
+import DataTable, { type DataTableColumn, type DataTablePagination } from '../common/DataTable';
 import type { MenuItem } from '../../types/menuSubmenu';
 
 type MenuSubmenuRow = MenuItem & {
@@ -15,6 +15,7 @@ type MenuSubmenuTableProps = {
   items: MenuItem[];
   parentById: Map<string, MenuItem>;
   loading: boolean;
+  pagination?: DataTablePagination;
   onEdit: (item: MenuItem) => void;
   onDelete: (item: MenuItem) => void;
 };
@@ -31,6 +32,7 @@ export default function MenuSubmenuTable({
   items,
   parentById,
   loading,
+  pagination,
   onEdit,
   onDelete,
 }: MenuSubmenuTableProps) {
@@ -167,6 +169,7 @@ export default function MenuSubmenuTable({
       noResultsMessage="No menu items match your search."
       exportFilename="menu-submenu"
       exportTitle="Menu & Submenu"
+      pagination={pagination}
     />
   );
 }

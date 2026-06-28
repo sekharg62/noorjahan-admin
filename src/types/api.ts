@@ -18,3 +18,17 @@ export class ApiError extends Error {
     this.status = status;
   }
 }
+
+export type PaginationMeta = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+};
+
+export type PaginatedQuery = {
+  page?: number;
+  limit?: number;
+};

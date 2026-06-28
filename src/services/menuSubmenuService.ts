@@ -1,6 +1,7 @@
 import { api } from '../lib/apiClient';
 import type {
   CreateMenuSubmenuPayload,
+  GetMenuSubmenuParams,
   MenuItem,
   MenuItemDetail,
   MenuSubmenuListResponse,
@@ -10,8 +11,15 @@ import type {
 
 const BASE_URL = '/api/menu-submenu';
 
-export async function getAllMenuSubmenus(): Promise<MenuSubmenuListResponse> {
-  return api.getData<MenuSubmenuListResponse>(BASE_URL);
+export async function getAllMenuSubmenus(
+  params?: GetMenuSubmenuParams,
+): Promise<MenuSubmenuListResponse> {
+  return api.getData<MenuSubmenuListResponse>(BASE_URL, {
+    params: {
+      ...(params?.page !== undefined ? { page: params.page } : {}),
+      ...(params?.limit !== undefined ? { limit: params.limit } : {}),
+    },
+  });
 }
 
 export async function getMenuSubmenuById(id: string): Promise<MenuItemDetail> {

@@ -1,3 +1,5 @@
+import type { PaginationMeta, PaginatedQuery } from './api';
+
 export type MenuItem = {
   id: string;
   name: string;
@@ -18,7 +20,10 @@ export type MenuItemDetail = MenuItem & {
 export type MenuSubmenuListResponse = {
   menus: MenuItemWithChildren[];
   flat: MenuItem[];
+  pagination?: PaginationMeta;
 };
+
+export type GetMenuSubmenuParams = PaginatedQuery;
 
 export type CreateMenuSubmenuPayload = {
   name: string;

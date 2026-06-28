@@ -1,9 +1,13 @@
 import { useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import {
   Box,
+  FormControl,
   IconButton,
   InputAdornment,
+  MenuItem,
+  Pagination,
   Paper,
+  Select,
   Skeleton,
   Stack,
   Table,
@@ -27,6 +31,7 @@ import DensitySmallIcon from '@mui/icons-material/DensitySmall';
 import { toast } from 'sonner';
 import CopyableCell from './CopyableCell';
 import { STORAGE_KEYS } from '../../constants/storage';
+import { PAGE_SIZE_OPTIONS } from '../../constants/pagination';
 import { exportTableToCsv, exportTableToPdf } from '../../utils/exportTable';
 import {
   readTableViewMode,
@@ -36,6 +41,16 @@ import {
 } from '../../utils/tableViewMode';
 
 export type SortDirection = 'asc' | 'desc';
+
+export type DataTablePagination = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  onLimitChange?: (limit: number) => void;
+  pageSizeOptions?: number[];
+};
 
 export type DataTableColumn<T> = {
   id: string;
@@ -66,6 +81,8 @@ type DataTableProps<T> = {
   showExport?: boolean;
   showViewMode?: boolean;
   viewModeStorageKey?: string;
+  maxBodyHeight?: number | string;
+  pagination?: DataTablePagination;
 };
 
 type SortState = {
@@ -95,6 +112,8 @@ export default function DataTable<T>({
   showExport = true,
   showViewMode = true,
   viewModeStorageKey = STORAGE_KEYS.TABLE_VIEW_MODE,
+  maxBodyHeight = 'min(480px, calc(100vh - 320px))',
+  pagination,
 }: DataTableProps<T>) {
   const [searchQuery, setSearchQuery] = useState('');
   const [sort, setSort] = useState<SortState | null>(null);
@@ -155,10 +174,23 @@ export default function DataTable<T>({
     return sorted;
   }, [rows, columns, searchQuery, sort]);
 
-  const showToolbar = !loading && rows.length > 0;
-  const hasRows = rows.length > 0;
+  const showToolbar = pagination
+    ? pagination.total > 0 || (loading && rows.length > 0)
+    : rows.length > 0 || loading;
+  const hasRows = pagination ? pagination.total > 0 : rows.length > 0;
   const hasFilteredRows = processedRows.length > 0;
-  const columnCount = columns.length + (showSerialNumber ? 1 : 0);
+  const serialOffset = pagination ? (pagination.page - 1) * pagination.limit : 0;
+  const pageSizeOptions = pagination?.pageSizeOptions ?? [...PAGE_SIZE_OPTIONS];
+
+  const rowStart = pagination
+    ? pagination.total === 0
+      ? 0
+      : serialOffset + 1
+    : 1;
+  const rowEnd = pagination
+    ? Math.min(serialOffset + processedRows.length, pagination.total)
+    : processedRows.length;
+  const totalCount = pagination?.total ?? rows.length;
 
   const exportColumns = useMemo(
     () =>
@@ -239,6 +271,27 @@ export default function DataTable<T>({
     },
   };
 
+  const stickyHeadCellSx = {
+    ...headCellSx,
+    position: 'sticky',
+    top: 0,
+    zIndex: 2,
+    bgcolor: (theme: Theme) =>
+      theme.palette.mode === 'light' ? theme.palette.background.paper : theme.palette.background.paper,
+    backgroundImage: (theme: Theme) =>
+      theme.palette.mode === 'light'
+        ? `linear-gradient(${theme.palette.primary.main}14, ${theme.palette.primary.main}14)`
+        : 'linear-gradient(rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.06))',
+  };
+
+  const toolbarSx = {
+    ...headCellSx,
+    py: viewConfig.toolbarPy,
+    px: viewConfig.px,
+    borderBottom: 1,
+    borderColor: 'divider',
+  };
+
   const serialCellSx = {
     whiteSpace: 'nowrap',
     width: viewConfig.serialWidth,
@@ -256,124 +309,127 @@ export default function DataTable<T>({
   };
 
   return (
-    <Paper elevation={0} sx={{ border: 1, borderColor: 'divider' }}>
-      <TableContainer>
-        <Table size={viewConfig.tableSize} sx={{ tableLayout: 'fixed', width: '100%' }}>
-          <TableHead>
-            {showToolbar && (
-              <TableRow>
-                <TableCell colSpan={columnCount} sx={{ ...headCellSx, py: viewConfig.toolbarPy }}>
-                  <Box
-                    sx={{
-                      position: 'relative',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'flex-end',
-                      minHeight: 40,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        position: 'absolute',
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        width: {
-                          xs: showViewMode ? 'calc(100% - 168px)' : 'calc(100% - 96px)',
-                          sm: 360,
-                        },
-                      }}
+    <Paper elevation={0} sx={{ border: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
+      {showToolbar && (
+        <Box sx={toolbarSx}>
+          <Box
+            sx={{
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              minHeight: 40,
+            }}
+          >
+            <Box
+              sx={{
+                position: 'absolute',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                width: {
+                  xs: showViewMode ? 'calc(100% - 168px)' : 'calc(100% - 96px)',
+                  sm: 360,
+                },
+              }}
+            >
+              <TextField
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={searchPlaceholder}
+                size="small"
+                fullWidth
+                disabled={loading}
+                slotProps={{
+                  input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon fontSize="small" color="action" />
+                      </InputAdornment>
+                    ),
+                  },
+                }}
+              />
+            </Box>
+
+            <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
+              {showViewMode && (
+                <ToggleButtonGroup
+                  value={viewMode}
+                  exclusive
+                  size="small"
+                  onChange={handleViewModeChange}
+                  aria-label="Table view mode"
+                  sx={{
+                    mr: 0.5,
+                    height: 34,
+                    '& .MuiToggleButton-root': {
+                      px: 0.75,
+                      py: 0,
+                      minWidth: 30,
+                      height: 34,
+                      lineHeight: 1,
+                    },
+                  }}
+                >
+                  <ToggleButton value="comfortable" aria-label="Comfortable spacing">
+                    <DensityLargeIcon sx={{ fontSize: 18 }} />
+                  </ToggleButton>
+                  <ToggleButton value="standard" aria-label="Standard spacing">
+                    <DensityMediumIcon sx={{ fontSize: 18 }} />
+                  </ToggleButton>
+                  <ToggleButton value="compact" aria-label="Compact spacing">
+                    <DensitySmallIcon sx={{ fontSize: 18 }} />
+                  </ToggleButton>
+                </ToggleButtonGroup>
+              )}
+
+              {showExport && (
+                <>
+                  <Tooltip title="Export PDF">
+                    <IconButton
+                      size="small"
+                      onClick={() => void handleExportPdf()}
+                      aria-label="Export table as PDF"
                     >
-                      <TextField
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        placeholder={searchPlaceholder}
-                        size="small"
-                        fullWidth
-                        slotProps={{
-                          input: {
-                            startAdornment: (
-                              <InputAdornment position="start">
-                                <SearchIcon fontSize="small" color="action" />
-                              </InputAdornment>
-                            ),
-                          },
-                        }}
+                      <Box
+                        component="img"
+                        src="/pdf.svg"
+                        alt=""
+                        sx={{ width: 22, height: 22, display: 'block' }}
                       />
-                    </Box>
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Export CSV">
+                    <IconButton
+                      size="small"
+                      onClick={handleExportCsv}
+                      aria-label="Export table as CSV"
+                    >
+                      <Box
+                        component="img"
+                        src="/csv.svg"
+                        alt=""
+                        sx={{ width: 22, height: 22, display: 'block' }}
+                      />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              )}
+            </Stack>
+          </Box>
+        </Box>
+      )}
 
-                    <Stack direction="row" spacing={0.5} sx={{ alignItems: 'center' }}>
-                      {showViewMode && (
-                        <ToggleButtonGroup
-                          value={viewMode}
-                          exclusive
-                          size="small"
-                          onChange={handleViewModeChange}
-                          aria-label="Table view mode"
-                          sx={{
-                            mr: 0.5,
-                            height: 34,
-                            '& .MuiToggleButton-root': {
-                              px: 0.75,
-                              py: 0,
-                              minWidth: 30,
-                              height: 34,
-                              lineHeight: 1,
-                            },
-                          }}
-                        >
-                          <ToggleButton value="comfortable" aria-label="Comfortable spacing">
-                            <DensityLargeIcon sx={{ fontSize: 18 }} />
-                          </ToggleButton>
-                          <ToggleButton value="standard" aria-label="Standard spacing">
-                            <DensityMediumIcon sx={{ fontSize: 18 }} />
-                          </ToggleButton>
-                          <ToggleButton value="compact" aria-label="Compact spacing">
-                            <DensitySmallIcon sx={{ fontSize: 18 }} />
-                          </ToggleButton>
-                        </ToggleButtonGroup>
-                      )}
-
-                      {showExport && (
-                        <>
-                          <Tooltip title="Export PDF">
-                            <IconButton
-                              size="small"
-                              onClick={() => void handleExportPdf()}
-                              aria-label="Export table as PDF"
-                            >
-                              <Box
-                                component="img"
-                                src="/pdf.svg"
-                                alt=""
-                                sx={{ width: 22, height: 22, display: 'block' }}
-                              />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Export CSV">
-                            <IconButton
-                              size="small"
-                              onClick={handleExportCsv}
-                              aria-label="Export table as CSV"
-                            >
-                              <Box
-                                component="img"
-                                src="/csv.svg"
-                                alt=""
-                                sx={{ width: 22, height: 22, display: 'block' }}
-                              />
-                            </IconButton>
-                          </Tooltip>
-                        </>
-                      )}
-                    </Stack>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            )}
-
+      <TableContainer sx={{ maxHeight: maxBodyHeight, overflow: 'auto', flex: 1 }}>
+        <Table
+          stickyHeader
+          size={viewConfig.tableSize}
+          sx={{ tableLayout: 'fixed', width: '100%' }}
+        >
+          <TableHead>
             <TableRow>
               {showSerialNumber && (
-                <TableCell sx={{ ...headCellSx, ...serialCellSx }}>
+                <TableCell sx={{ ...stickyHeadCellSx, ...serialCellSx }}>
                   {serialNumberLabel}
                 </TableCell>
               )}
@@ -383,7 +439,7 @@ export default function DataTable<T>({
                   align={column.align ?? 'left'}
                   width={column.width}
                   sx={{
-                    ...headCellSx,
+                    ...stickyHeadCellSx,
                     ...(column.width ? { width: column.width } : undefined),
                   }}
                 >
@@ -405,7 +461,7 @@ export default function DataTable<T>({
 
           <TableBody>
             {loading &&
-              Array.from({ length: 5 }).map((_, index) => (
+              Array.from({ length: pagination?.limit ?? 5 }).map((_, index) => (
                 <TableRow key={`skeleton-${index}`}>
                   {showSerialNumber && (
                     <TableCell sx={{ ...serialCellSx, ...bodyCellSx }}>
@@ -446,14 +502,14 @@ export default function DataTable<T>({
                 <TableRow key={getRowKey(row)} hover>
                   {showSerialNumber && (
                     <TableCell sx={{ ...serialCellSx, ...bodyCellSx }}>
-                      <CopyableCell value={String(index + 1)}>
+                      <CopyableCell value={String(serialOffset + index + 1)}>
                         <Typography
                           variant="body2"
                           color="text.secondary"
                           noWrap
                           sx={{ textAlign: 'center' }}
                         >
-                          {index + 1}
+                          {serialOffset + index + 1}
                         </Typography>
                       </CopyableCell>
                     </TableCell>
@@ -482,12 +538,60 @@ export default function DataTable<T>({
         </Table>
       </TableContainer>
 
-      {!loading && hasRows && (
-        <Box sx={{ px: 2, py: 1.5, borderTop: 1, borderColor: 'divider' }}>
+      {hasRows && (
+        <Box
+          sx={{
+            px: 2,
+            py: 1.5,
+            borderTop: 1,
+            borderColor: 'divider',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 2,
+          }}
+        >
           <Typography variant="caption" color="text.secondary">
-            Showing {processedRows.length} of {rows.length} items
-            {searchQuery.trim() ? ` for "${searchQuery.trim()}"` : ''}
+            {pagination
+              ? loading
+                ? `Loading page ${pagination.page}…`
+                : `Showing ${rowStart}-${rowEnd} of ${totalCount} items`
+              : `Showing ${processedRows.length} of ${rows.length} items`}
+            {!pagination && searchQuery.trim() ? ` for "${searchQuery.trim()}"` : ''}
           </Typography>
+
+          {pagination && pagination.totalPages > 0 && (
+            <Stack direction="row" spacing={2} sx={{ alignItems: 'center', flexWrap: 'wrap' }}>
+              {pagination.onLimitChange && (
+                <FormControl size="small" sx={{ minWidth: 110 }}>
+                  <Select
+                    value={pagination.limit}
+                    onChange={(e) => pagination.onLimitChange?.(Number(e.target.value))}
+                    displayEmpty
+                    disabled={loading}
+                  >
+                    {pageSizeOptions.map((size) => (
+                      <MenuItem key={size} value={size}>
+                        {size} / page
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+              <Pagination
+                count={pagination.totalPages}
+                page={pagination.page}
+                onChange={(_event, nextPage) => pagination.onPageChange(nextPage)}
+                color="primary"
+                shape="rounded"
+                size="small"
+                showFirstButton
+                showLastButton
+                disabled={loading}
+              />
+            </Stack>
+          )}
         </Box>
       )}
     </Paper>

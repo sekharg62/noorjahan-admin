@@ -10,14 +10,27 @@ import MenuSubmenuFormModal, {
   type MenuSubmenuFormValues,
 } from '../components/menuSubmenu/MenuSubmenuFormModal';
 import DeleteMenuSubmenuDialog from '../components/menuSubmenu/DeleteMenuSubmenuDialog';
+import type { DataTablePagination } from '../components/common/DataTable';
 import { getApiErrorMessage } from '../lib/apiClient';
 import * as menuSubmenuService from '../services/menuSubmenuService';
 import type { MenuItem } from '../types/menuSubmenu';
+import type { PaginationMeta } from '../types/api';
+import {
+  DEFAULT_PAGE,
+  DEFAULT_LIMIT,
+  DEFAULT_PAGINATION,
+  PAGE_SIZE_OPTIONS,
+} from '../constants/pagination';
 
 export default function MenuSubmenuPage() {
   const [items, setItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(DEFAULT_PAGE);
+  const [limit, setLimit] = useState(DEFAULT_LIMIT);
+  const [pagination, setPagination] = useState<PaginationMeta>(DEFAULT_PAGINATION);
+  const [parentMenus, setParentMenus] = useState<MenuItem[]>([]);
+  const [parentById, setParentById] = useState<Map<string, MenuItem>>(new Map());
 
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
@@ -28,33 +41,56 @@ export default function MenuSubmenuPage() {
   const [deletingItem, setDeletingItem] = useState<MenuItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const parentMenus = useMemo(
-    () => items.filter((item) => !item.parentId),
-    [items],
-  );
-
-  const parentById = useMemo(
-    () => new Map(parentMenus.map((menu) => [menu.id, menu])),
-    [parentMenus],
-  );
+  const fetchParentLookup = useCallback(async () => {
+    try {
+      const response = await menuSubmenuService.getAllMenuSubmenus({ page: 1, limit: 1000 });
+      const lookup = new Map<string, MenuItem>();
+      response.flat.forEach((item) => lookup.set(item.id, item));
+      setParentById(lookup);
+      setParentMenus(response.flat.filter((item) => !item.parentId));
+    } catch {
+      // Parent lookup is optional for table display; form may have limited parent options.
+    }
+  }, []);
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const response = await menuSubmenuService.getAllMenuSubmenus();
+      const response = await menuSubmenuService.getAllMenuSubmenus({ page, limit });
       setItems(response.flat);
+      setPagination(response.pagination ?? { ...DEFAULT_PAGINATION, page, limit, total: response.flat.length });
     } catch (err) {
       setError(getApiErrorMessage(err, 'Failed to load menu items'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page, limit]);
+
+  useEffect(() => {
+    void fetchParentLookup();
+  }, [fetchParentLookup]);
 
   useEffect(() => {
     void fetchItems();
   }, [fetchItems]);
+
+  const tablePagination = useMemo<DataTablePagination>(
+    () => ({
+      page: pagination.page,
+      limit: pagination.limit,
+      total: pagination.total,
+      totalPages: pagination.totalPages,
+      pageSizeOptions: PAGE_SIZE_OPTIONS,
+      onPageChange: (nextPage) => setPage(nextPage),
+      onLimitChange: (nextLimit) => {
+        setLimit(nextLimit);
+        setPage(DEFAULT_PAGE);
+      },
+    }),
+    [pagination],
+  );
 
   const openCreateModal = () => {
     setFormMode('create');
@@ -73,6 +109,15 @@ export default function MenuSubmenuPage() {
       setFormOpen(false);
       setEditingItem(null);
     }
+  };
+
+  const refreshAfterMutation = async () => {
+    await fetchParentLookup();
+    if (items.length === 1 && page > 1) {
+      setPage((current) => current - 1);
+      return;
+    }
+    await fetchItems();
   };
 
   const handleFormSubmit = async (values: MenuSubmenuFormValues) => {
@@ -97,7 +142,17 @@ export default function MenuSubmenuPage() {
 
       setFormOpen(false);
       setEditingItem(null);
-      await fetchItems();
+      await fetchParentLookup();
+
+      if (formMode === 'create') {
+        if (page !== DEFAULT_PAGE) {
+          setPage(DEFAULT_PAGE);
+        } else {
+          await fetchItems();
+        }
+      } else {
+        await refreshAfterMutation();
+      }
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'Failed to save menu item'));
     } finally {
@@ -127,7 +182,7 @@ export default function MenuSubmenuPage() {
       toast.success('Menu item deleted');
       setDeleteOpen(false);
       setDeletingItem(null);
-      await fetchItems();
+      await refreshAfterMutation();
     } catch (err) {
       toast.error(getApiErrorMessage(err, 'Failed to delete menu item'));
     } finally {
@@ -135,7 +190,7 @@ export default function MenuSubmenuPage() {
     }
   };
 
-  const showEmptyState = !loading && !error && items.length === 0;
+  const showEmptyState = !loading && !error && pagination.total === 0;
 
   return (
     <Box>
@@ -168,6 +223,7 @@ export default function MenuSubmenuPage() {
           items={items}
           parentById={parentById}
           loading={loading}
+          pagination={tablePagination}
           onEdit={openEditModal}
           onDelete={openDeleteDialog}
         />
