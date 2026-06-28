@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Box,
@@ -9,30 +9,73 @@ import {
   Grid,
   Typography,
 } from '@mui/material';
-import InventoryIcon from '@mui/icons-material/Inventory';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
-import ViewCarouselIcon from '@mui/icons-material/ViewCarousel';
+import InventoryIcon from '@mui/icons-material/Inventory';
+import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
+import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
 import PageHeader from '../components/PageHeader';
 import { useAuth } from '../contexts/AuthContext';
-import { getHealth } from '../services/healthService';
 import { API_URL } from '../config/env';
+import { getApiErrorMessage } from '../lib/apiClient';
+import * as dashboardService from '../services/dashboardService';
+import { getHealth } from '../services/healthService';
+import type { DashboardStats } from '../types/dashboard';
 
-type StatCard = {
+type StatCardConfig = {
+  key: keyof DashboardStats;
   label: string;
-  value: string;
   icon: React.ReactNode;
   color: string;
 };
 
-const statCards: StatCard[] = [
-  { label: 'Products', value: '—', icon: <InventoryIcon />, color: '#6B1D3A' },
-  { label: 'Menu & Submenu', value: '—', icon: <AccountTreeIcon />, color: '#1565C0' },
-  { label: 'Banners', value: '—', icon: <ViewCarouselIcon />, color: '#C9A962' },
+const STAT_CARDS: StatCardConfig[] = [
+  { key: 'totalMenuItems', label: 'Menu items', icon: <AccountTreeIcon />, color: '#1565C0' },
+  {
+    key: 'totalSubmenuItems',
+    label: 'Submenu items',
+    icon: <SubdirectoryArrowRightIcon />,
+    color: '#2E7D32',
+  },
+  { key: 'totalProducts', label: 'Products', icon: <InventoryIcon />, color: '#6B1D3A' },
+  {
+    key: 'totalProductImages',
+    label: 'Product images',
+    icon: <PhotoLibraryIcon />,
+    color: '#C9A962',
+  },
 ];
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
   const [apiStatus, setApiStatus] = useState<'loading' | 'ok' | 'error'>('loading');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function fetchStats() {
+      setStatsLoading(true);
+      setStatsError(null);
+
+      try {
+        const data = await dashboardService.getDashboardStats();
+        if (!cancelled) setStats(data);
+      } catch (err) {
+        if (!cancelled) {
+          setStatsError(getApiErrorMessage(err, 'Failed to load dashboard stats'));
+        }
+      } finally {
+        if (!cancelled) setStatsLoading(false);
+      }
+    }
+
+    void fetchStats();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -52,16 +95,31 @@ export default function DashboardPage() {
     };
   }, []);
 
+  const statValues = useMemo(
+    () =>
+      STAT_CARDS.map((card) => ({
+        ...card,
+        value: stats ? String(stats[card.key]) : '—',
+      })),
+    [stats],
+  );
+
   return (
     <Box>
       <PageHeader
         title={`Welcome, ${user?.name ?? 'Admin'}`}
-        description="Overview of your NOORJAHAN store. Connect the backend API to see live data."
+        description="Live overview of your NOORJAHAN store catalog and navigation."
       />
 
+      {statsError && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {statsError}
+        </Alert>
+      )}
+
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        {statCards.map((card) => (
-          <Grid key={card.label} size={{ xs: 12, sm: 6, md: 4 }}>
+        {statValues.map((card) => (
+          <Grid key={card.key} size={{ xs: 12, sm: 6, md: 3 }}>
             <Card elevation={0} sx={{ border: 1, borderColor: 'divider' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -80,7 +138,11 @@ export default function DashboardPage() {
                     <Typography variant="body2" color="text.secondary">
                       {card.label}
                     </Typography>
-                    <Typography variant="h5">{card.value}</Typography>
+                    {statsLoading ? (
+                      <CircularProgress size={22} sx={{ mt: 0.5 }} />
+                    ) : (
+                      <Typography variant="h5">{card.value}</Typography>
+                    )}
                   </Box>
                 </Box>
               </CardContent>
