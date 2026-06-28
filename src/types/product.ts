@@ -1,3 +1,6 @@
+import type { PaginationMeta, PaginatedQuery } from './api';
+import type { ProductImage } from './productImage';
+
 export type Product = {
   id: string;
   menuSubmenuId: string;
@@ -10,6 +13,17 @@ export type Product = {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  images?: ProductImage[];
+};
+
+export type ProductListResponse = {
+  products: Product[];
+  pagination: PaginationMeta;
+};
+
+export type GetProductsParams = PaginatedQuery & {
+  menuId?: string;
+  submenuId?: string;
 };
 
 export type CreateProductPayload = {

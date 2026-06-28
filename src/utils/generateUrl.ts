@@ -26,8 +26,19 @@ export function generateBannerImageUrl(baseUrl: string, filename?: string): stri
   return `${baseUrl.replace(/\/$/, '')}/uploads/banners/${generateUrl()}.${extension}`;
 }
 
+export function generateProductImageUrl(baseUrl: string, filename?: string): string {
+  const extension = filename ? getFileExtension(filename) : 'jpg';
+  return `${baseUrl.replace(/\/$/, '')}/uploads/products/${generateUrl()}.${extension}`;
+}
+
 /** Placeholder until a real image upload service is connected. */
 export async function uploadBannerImage(file: File, baseUrl: string): Promise<string> {
   await Promise.resolve();
   return generateBannerImageUrl(baseUrl, file.name);
+}
+
+/** Placeholder until a real image upload service is connected. */
+export async function uploadProductImage(file: File, baseUrl: string): Promise<string> {
+  await Promise.resolve();
+  return generateProductImageUrl(baseUrl, file.name);
 }

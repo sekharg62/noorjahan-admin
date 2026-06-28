@@ -10,9 +10,8 @@ import {
   Typography,
 } from '@mui/material';
 import InventoryIcon from '@mui/icons-material/Inventory';
-import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
-import PeopleIcon from '@mui/icons-material/People';
-import CategoryIcon from '@mui/icons-material/Category';
+import AccountTreeIcon from '@mui/icons-material/AccountTree';
+import ViewCarouselIcon from '@mui/icons-material/ViewCarousel';
 import PageHeader from '../components/PageHeader';
 import { useAuth } from '../contexts/AuthContext';
 import { getHealth } from '../services/healthService';
@@ -27,9 +26,8 @@ type StatCard = {
 
 const statCards: StatCard[] = [
   { label: 'Products', value: '—', icon: <InventoryIcon />, color: '#6B1D3A' },
-  { label: 'Orders', value: '—', icon: <ShoppingBagIcon />, color: '#C9A962' },
-  { label: 'Customers', value: '—', icon: <PeopleIcon />, color: '#2E7D32' },
-  { label: 'Collections', value: '—', icon: <CategoryIcon />, color: '#1565C0' },
+  { label: 'Menu & Submenu', value: '—', icon: <AccountTreeIcon />, color: '#1565C0' },
+  { label: 'Banners', value: '—', icon: <ViewCarouselIcon />, color: '#C9A962' },
 ];
 
 export default function DashboardPage() {
@@ -63,7 +61,7 @@ export default function DashboardPage() {
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {statCards.map((card) => (
-          <Grid key={card.label} size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid key={card.label} size={{ xs: 12, sm: 6, md: 4 }}>
             <Card elevation={0} sx={{ border: 1, borderColor: 'divider' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

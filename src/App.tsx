@@ -4,9 +4,7 @@ import PublicRoute from './components/auth/PublicRoute';
 import DashboardLayout from './components/layout/DashboardLayout';
 import DashboardPage from './pages/DashboardPage';
 import ProductsPage from './pages/ProductsPage';
-import OrdersPage from './pages/OrdersPage';
-import CustomersPage from './pages/CustomersPage';
-import CollectionsPage from './pages/CollectionsPage';
+import CreateProductPage from './pages/CreateProductPage';
 import MenuSubmenuPage from './pages/MenuSubmenuPage';
 import BannersPage from './pages/BannersPage';
 import SettingsPage from './pages/SettingsPage';
@@ -23,9 +21,7 @@ export default function App() {
         <Route element={<DashboardLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="products" element={<ProductsPage />} />
-          <Route path="orders" element={<OrdersPage />} />
-          <Route path="customers" element={<CustomersPage />} />
-          <Route path="collections" element={<CollectionsPage />} />
+          <Route path="products/new" element={<CreateProductPage />} />
           <Route path="menu-submenu" element={<MenuSubmenuPage />} />
           <Route path="banners" element={<BannersPage />} />
           <Route path="settings" element={<SettingsPage />} />
