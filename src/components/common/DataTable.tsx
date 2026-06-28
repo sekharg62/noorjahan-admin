@@ -309,16 +309,26 @@ export default function DataTable<T>({
                           size="small"
                           onChange={handleViewModeChange}
                           aria-label="Table view mode"
-                          sx={{ mr: 0.5 }}
+                          sx={{
+                            mr: 0.5,
+                            height: 34,
+                            '& .MuiToggleButton-root': {
+                              px: 0.75,
+                              py: 0,
+                              minWidth: 30,
+                              height: 34,
+                              lineHeight: 1,
+                            },
+                          }}
                         >
                           <ToggleButton value="comfortable" aria-label="Comfortable spacing">
-                            <DensityLargeIcon fontSize="small" />
+                            <DensityLargeIcon sx={{ fontSize: 18 }} />
                           </ToggleButton>
                           <ToggleButton value="standard" aria-label="Standard spacing">
-                            <DensityMediumIcon fontSize="small" />
+                            <DensityMediumIcon sx={{ fontSize: 18 }} />
                           </ToggleButton>
                           <ToggleButton value="compact" aria-label="Compact spacing">
-                            <DensitySmallIcon fontSize="small" />
+                            <DensitySmallIcon sx={{ fontSize: 18 }} />
                           </ToggleButton>
                         </ToggleButtonGroup>
                       )}
