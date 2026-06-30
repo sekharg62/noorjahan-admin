@@ -36,3 +36,14 @@ export type CreateProductPayload = {
   stock?: number;
   isActive?: boolean;
 };
+
+export type PatchProductPayload = {
+  menuSubmenuId?: string;
+  name?: string;
+  slug?: string;
+  description?: string;
+  price?: string;
+  offerPrice?: string | null;
+  stock?: number;
+  isActive?: boolean;
+};

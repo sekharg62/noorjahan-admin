@@ -3,8 +3,14 @@ import { Alert, Box, Button, Card, Tab, Tabs } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import { Link as RouterLink } from 'react-router-dom';
+import { toast } from 'sonner';
 import PageHeader from '../components/PageHeader';
 import EmptyState from '../components/EmptyState';
+import DeleteProductDialog from '../components/products/DeleteProductDialog';
+import ProductFormModal, {
+  productToFormValues,
+  type ProductFormValues,
+} from '../components/products/ProductFormModal';
 import ProductTable from '../components/products/ProductTable';
 import type { DataTablePagination } from '../components/common/DataTable';
 import {
@@ -39,6 +45,14 @@ export default function ProductsPage() {
   const [menuItemsFlat, setMenuItemsFlat] = useState<MenuItem[]>([]);
   const [menuFilter, setMenuFilter] = useState(ALL_FILTER);
   const [submenuFilter, setSubmenuFilter] = useState(ALL_FILTER);
+
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const fetchMenus = useCallback(async () => {
     try {
@@ -120,6 +134,11 @@ export default function ProductsPage() {
     return lookup;
   }, [menuItemsFlat, menuTree]);
 
+  const submenus = useMemo(
+    () => menuItemsFlat.filter((item) => item.parentId),
+    [menuItemsFlat],
+  );
+
   const tablePagination = useMemo<DataTablePagination>(
     () => ({
       page: pagination.page,
@@ -145,6 +164,81 @@ export default function ProductsPage() {
   const handleSubmenuFilterChange = (_: SyntheticEvent, value: string) => {
     setSubmenuFilter(value);
     setPage(DEFAULT_PAGE);
+  };
+
+  const openDeleteDialog = (product: Product) => {
+    setDeletingProduct(product);
+    setDeleteOpen(true);
+  };
+
+  const openEditModal = (product: Product) => {
+    setEditingProduct(product);
+    setFormOpen(true);
+  };
+
+  const closeFormModal = () => {
+    if (!isSubmitting) {
+      setFormOpen(false);
+      setEditingProduct(null);
+    }
+  };
+
+  const closeDeleteDialog = () => {
+    if (!isDeleting) {
+      setDeleteOpen(false);
+      setDeletingProduct(null);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingProduct) return;
+
+    setIsDeleting(true);
+
+    try {
+      await productService.deleteProduct(deletingProduct.id);
+      toast.success('Product deleted');
+      setDeleteOpen(false);
+      setDeletingProduct(null);
+
+      if (products.length === 1 && page > 1) {
+        setPage((current) => current - 1);
+      } else {
+        await fetchProducts();
+      }
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Failed to delete product'));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleFormSubmit = async (values: ProductFormValues) => {
+    if (!editingProduct) return;
+
+    setIsSubmitting(true);
+
+    try {
+      await productService.patchProduct(editingProduct.id, {
+        menuSubmenuId: values.menuSubmenuId,
+        name: values.name.trim(),
+        slug: values.slug.trim(),
+        description: values.description.trim(),
+        price: values.price.trim(),
+        offerPrice: values.offerPrice.trim() ? values.offerPrice.trim() : null,
+        stock: values.stock,
+        isActive: values.isActive,
+      });
+
+      toast.success('Product updated');
+      setFormOpen(false);
+      setEditingProduct(null);
+      await fetchProducts();
+    } catch (err) {
+      toast.error(getApiErrorMessage(err, 'Failed to update product'));
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const hasActiveFilter = menuFilter !== ALL_FILTER || submenuFilter !== ALL_FILTER;
@@ -230,8 +324,28 @@ export default function ProductsPage() {
           submenuById={submenuById}
           loading={loading}
           pagination={tablePagination}
+          onEdit={openEditModal}
+          onDelete={openDeleteDialog}
         />
       )}
+
+      <ProductFormModal
+        open={formOpen}
+        initialValues={editingProduct ? productToFormValues(editingProduct) : undefined}
+        submenus={submenus}
+        submenuById={submenuById}
+        isSubmitting={isSubmitting}
+        onClose={closeFormModal}
+        onSubmit={handleFormSubmit}
+      />
+
+      <DeleteProductDialog
+        open={deleteOpen}
+        product={deletingProduct}
+        isDeleting={isDeleting}
+        onClose={closeDeleteDialog}
+        onConfirm={handleDeleteConfirm}
+      />
     </Box>
   );
 }

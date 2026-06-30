@@ -12,6 +12,8 @@ import {
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import InventoryIcon from '@mui/icons-material/Inventory';
 import PhotoLibraryIcon from '@mui/icons-material/PhotoLibrary';
+import PeopleIcon from '@mui/icons-material/People';
+import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
 import PageHeader from '../components/PageHeader';
 import { useAuth } from '../contexts/AuthContext';
@@ -43,6 +45,8 @@ const STAT_CARDS: StatCardConfig[] = [
     icon: <PhotoLibraryIcon />,
     color: '#C9A962',
   },
+  { key: 'totalOrders', label: 'Orders', icon: <ShoppingBagIcon />, color: '#E65100' },
+  { key: 'totalCustomers', label: 'Customers', icon: <PeopleIcon />, color: '#4527A0' },
 ];
 
 export default function DashboardPage() {
@@ -108,7 +112,7 @@ export default function DashboardPage() {
     <Box>
       <PageHeader
         title={`Welcome, ${user?.name ?? 'Admin'}`}
-        description="Live overview of your NOORJAHAN store catalog and navigation."
+        description="Live overview of your NOORJAHAN store catalog, orders, and customers."
       />
 
       {statsError && (
@@ -119,7 +123,7 @@ export default function DashboardPage() {
 
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {statValues.map((card) => (
-          <Grid key={card.key} size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid key={card.key} size={{ xs: 12, sm: 6, md: 4 }}>
             <Card elevation={0} sx={{ border: 1, borderColor: 'divider' }}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

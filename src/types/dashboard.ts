@@ -3,4 +3,6 @@ export type DashboardStats = {
   totalSubmenuItems: number;
   totalProducts: number;
   totalProductImages: number;
+  totalOrders: number;
+  totalCustomers: number;
 };

@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
-import { Avatar, Chip, Stack, Typography } from '@mui/material';
+import { Avatar, Chip, IconButton, Stack, Tooltip, Typography } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
 import DataTable, { type DataTableColumn, type DataTablePagination } from '../common/DataTable';
 import type { Product } from '../../types/product';
 
@@ -18,6 +20,8 @@ type ProductTableProps = {
   submenuById: Map<string, { name: string; menuName: string }>;
   loading: boolean;
   pagination: DataTablePagination;
+  onEdit: (product: Product) => void;
+  onDelete: (product: Product) => void;
 };
 
 function formatDate(value: string): string {
@@ -43,6 +47,8 @@ export default function ProductTable({
   submenuById,
   loading,
   pagination,
+  onEdit,
+  onDelete,
 }: ProductTableProps) {
   const rows = useMemo<ProductRow[]>(
     () =>
@@ -203,7 +209,7 @@ export default function ProductTable({
         id: 'createdAt',
         label: 'Created',
         sortable: true,
-        width: '12%',
+        width: '10%',
         getSortValue: (row) => new Date(row.createdAt).getTime(),
         getSearchValue: (row) => row.createdLabel,
         getCopyValue: (row) => row.createdLabel,
@@ -213,8 +219,39 @@ export default function ProductTable({
           </Typography>
         ),
       },
+      {
+        id: 'actions',
+        label: 'Actions',
+        align: 'right',
+        width: 100,
+        exportable: false,
+        getSearchValue: (row) => row.name,
+        render: (row) => (
+          <>
+            <Tooltip title="Edit">
+              <IconButton
+                size="small"
+                onClick={() => onEdit(row)}
+                aria-label={`Edit ${row.name}`}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Delete">
+              <IconButton
+                size="small"
+                color="error"
+                onClick={() => onDelete(row)}
+                aria-label={`Delete ${row.name}`}
+              >
+                <DeleteIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </>
+        ),
+      },
     ],
-    [],
+    [onDelete, onEdit],
   );
 
   return (

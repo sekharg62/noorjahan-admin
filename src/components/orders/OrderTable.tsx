@@ -90,6 +90,11 @@ export default function OrderTable({
         getSortValue: (row) => row.orderNo,
         getSearchValue: (row) => row.orderNo,
         getCopyValue: (row) => row.orderNo,
+        renderFooter: () => (
+          <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 600 }}>
+            Page total
+          </Typography>
+        ),
         render: (row) => (
           <Typography variant="body2" sx={{ fontWeight: 600 }} noWrap>
             {row.orderNo}
@@ -137,6 +142,17 @@ export default function OrderTable({
         getSortValue: (row) => Number.parseFloat(row.total) || 0,
         getSearchValue: (row) => row.totalLabel,
         getCopyValue: (row) => row.totalLabel,
+        renderFooter: (pageRows) => {
+          const sum = pageRows.reduce(
+            (acc, row) => acc + (Number.parseFloat(row.total) || 0),
+            0,
+          );
+          return (
+            <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
+              {formatOrderMoney(sum.toFixed(2))}
+            </Typography>
+          );
+        },
         render: (row) => (
           <Typography variant="body2" sx={{ fontWeight: 500 }} noWrap>
             {row.totalLabel}

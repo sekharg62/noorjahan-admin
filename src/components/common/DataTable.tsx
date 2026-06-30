@@ -14,6 +14,7 @@ import {
   TableBody,
   TableCell,
   TableContainer,
+  TableFooter,
   TableHead,
   TableRow,
   TableSortLabel,
@@ -63,6 +64,8 @@ export type DataTableColumn<T> = {
   getCopyValue?: (row: T) => string;
   getExportValue?: (row: T) => string;
   exportable?: boolean;
+  /** Optional footer cell — receives currently visible (filtered) rows on this page. */
+  renderFooter?: (rows: T[]) => ReactNode;
   render: (row: T, rowIndex: number) => ReactNode;
 };
 
@@ -308,6 +311,21 @@ export default function DataTable<T>({
     fontSize: viewConfig.fontSize,
   };
 
+  const footerCellSx = {
+    ...bodyCellSx,
+    fontWeight: 600,
+    bgcolor: (theme: Theme) =>
+      theme.palette.mode === 'light'
+        ? `${theme.palette.primary.main}0A`
+        : 'rgba(255, 255, 255, 0.04)',
+    borderTop: 1,
+    borderColor: 'divider',
+    py: viewConfig.headPy,
+  };
+
+  const showColumnFooter =
+    !loading && hasFilteredRows && columns.some((column) => column.renderFooter);
+
   return (
     <Paper elevation={0} sx={{ border: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
       {showToolbar && (
@@ -535,6 +553,26 @@ export default function DataTable<T>({
                 </TableRow>
               ))}
           </TableBody>
+
+          {showColumnFooter && (
+            <TableFooter>
+              <TableRow>
+                {showSerialNumber && <TableCell sx={{ ...serialCellSx, ...footerCellSx }} />}
+                {columns.map((column) => (
+                  <TableCell
+                    key={column.id}
+                    align={column.align ?? 'left'}
+                    sx={{
+                      ...footerCellSx,
+                      ...(column.width ? { width: column.width } : undefined),
+                    }}
+                  >
+                    {column.renderFooter?.(processedRows) ?? null}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableFooter>
+          )}
         </Table>
       </TableContainer>
 
