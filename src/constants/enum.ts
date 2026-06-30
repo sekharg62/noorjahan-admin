@@ -17,3 +17,32 @@ export const BANNER_TYPE_LABELS: Record<BannerType, string> = {
   [BannerType.CATEGORY]: 'Category',
   [BannerType.PRODUCT]: 'Product',
 };
+
+export const OrderStatus = {
+  PENDING: 'PENDING',
+  CONFIRMED: 'CONFIRMED',
+  PACKING: 'PACKING',
+  SHIPPED: 'SHIPPED',
+  DELIVERED: 'DELIVERED',
+  CANCELLED: 'CANCELLED',
+} as const;
+
+export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
+
+export const ORDER_STATUS_OPTIONS: OrderStatus[] = [
+  OrderStatus.PENDING,
+  OrderStatus.CONFIRMED,
+  OrderStatus.PACKING,
+  OrderStatus.SHIPPED,
+  OrderStatus.DELIVERED,
+  OrderStatus.CANCELLED,
+];
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  [OrderStatus.PENDING]: 'Pending',
+  [OrderStatus.CONFIRMED]: 'Confirmed',
+  [OrderStatus.PACKING]: 'Packing',
+  [OrderStatus.SHIPPED]: 'Shipped',
+  [OrderStatus.DELIVERED]: 'Delivered',
+  [OrderStatus.CANCELLED]: 'Cancelled',
+};

@@ -23,6 +23,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DashboardIcon from '@mui/icons-material/Dashboard';
 import InventoryIcon from '@mui/icons-material/Inventory';
+import ShoppingBagIcon from '@mui/icons-material/ShoppingBag';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
 import ViewCarouselIcon from '@mui/icons-material/ViewCarousel';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -41,6 +42,7 @@ const DRAWER_COLLAPSED_WIDTH = 72;
 const navItems = [
   { label: 'Dashboard', path: '/', icon: <DashboardIcon /> },
   { label: 'Products', path: '/products', icon: <InventoryIcon /> },
+  { label: 'Orders', path: '/orders', icon: <ShoppingBagIcon /> },
   { label: 'Menu & Submenu', path: '/menu-submenu', icon: <AccountTreeIcon /> },
   { label: 'Banners', path: '/banners', icon: <ViewCarouselIcon /> },
   { label: 'Settings', path: '/settings', icon: <SettingsIcon /> },
